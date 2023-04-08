@@ -1,10 +1,92 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import "./styles/global.css";
 
+const createUserFormSchema = z.object({
+  name: z
+    .string()
+    .nonempty("Name is required.")
+    .transform((name) => {
+      return name
+        .split(" ")
+        .map((name) => {
+          return name[0].toLocaleUpperCase().concat(name.substring(1));
+        })
+        .join(" ");
+    }),
+  email: z
+    .string()
+    .nonempty("E-mail is required")
+    .email("E-mail format incorrect.")
+    .refine((email) => {
+      return email.endsWith("@gmail.com.br");
+    }, "E-mail required end with @gmail.com.br"),
+  password: z
+    .string()
+    .nonempty("Password is required")
+    .min(8, "Min 8 characters required"),
+});
+
+type CreateUserFormData = z.infer<typeof createUserFormSchema>;
+
 function App() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CreateUserFormData>({
+    resolver: zodResolver(createUserFormSchema),
+  });
+
+  function createUser(data: any) {
+    console.log(data);
+  }
+
   return (
-    <div className="w-full h-screen flex items-center justify-center">
-      <h1>Hello World!</h1>
-    </div>
+    <main className="w-full h-screen flex items-center justify-center">
+      <form
+        className="w-full max-w-xs flex flex-col gap-4"
+        onSubmit={handleSubmit(createUser)}
+      >
+        <div className="flex flex-col gap-1">
+          <label>Name</label>
+          <input
+            type="text"
+            className="w-full h-10 rounded px-3 shadow-sm border border-zinc-600"
+            {...register("name")}
+          />
+          {errors.name && <span>{errors.name.message}</span>}
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label>E-mail</label>
+          <input
+            type="email"
+            className="w-full h-10 rounded px-3 shadow-sm border border-zinc-600"
+            {...register("email")}
+          />
+          {errors.email && <span>{errors.email.message}</span>}
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label>Password</label>
+          <input
+            type="password"
+            className="w-full h-10 rounded px-3 shadow-sm border border-zinc-600"
+            {...register("password")}
+          />
+          {errors.password && <span>{errors.password.message}</span>}
+        </div>
+
+        <button
+          type="submit"
+          className="bg-emerald-500 hover:bg-emerald-600 rounded font-semibold text-white h-10"
+        >
+          Save
+        </button>
+      </form>
+    </main>
   );
 }
 
