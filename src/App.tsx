@@ -1,9 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
+import { client } from "./lib/supabase";
 import "./styles/global.css";
 
 const createUserFormSchema = z.object({
+  avatar: z
+    .instanceof(FileList)
+    .transform((list) => list.item(0)!)
+    .refine(
+      (file) => file.size <= 5 * 1024 * 1024,
+      "O arquivo precisa ter no maximo 5MB"
+    ),
   name: z
     .string()
     .nonempty("Name is required.")
@@ -56,7 +64,11 @@ function App() {
     name: "techs",
   });
 
-  function createUser(data: CreateUserFormData) {
+  async function createUser(data: CreateUserFormData) {
+    await client.storage
+      .from("forms-advanced")
+      .upload(data.avatar?.name, data.avatar);
+
     console.log(data);
   }
 
@@ -74,13 +86,23 @@ function App() {
         onSubmit={handleSubmit(createUser)}
       >
         <div className="flex flex-col gap-1">
+          <label>Avatar</label>
+          <input type="file" accept="image/*" {...register("avatar")} />
+          {errors.avatar && (
+            <span className="text-red-600">{errors.avatar.message}</span>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1">
           <label>Name</label>
           <input
             type="text"
             className="w-full h-10 rounded px-3 shadow-sm border border-zinc-600"
             {...register("name")}
           />
-          {errors.name && <span>{errors.name.message}</span>}
+          {errors.name && (
+            <span className="text-red-600">{errors.name.message}</span>
+          )}
         </div>
 
         <div className="flex flex-col gap-1">
@@ -90,7 +112,9 @@ function App() {
             className="w-full h-10 rounded px-3 shadow-sm border border-zinc-600"
             {...register("email")}
           />
-          {errors.email && <span>{errors.email.message}</span>}
+          {errors.email && (
+            <span className="text-red-600">{errors.email.message}</span>
+          )}
         </div>
 
         <div className="flex flex-col gap-1">
@@ -100,7 +124,9 @@ function App() {
             className="w-full h-10 rounded px-3 shadow-sm border border-zinc-600"
             {...register("password")}
           />
-          {errors.password && <span>{errors.password.message}</span>}
+          {errors.password && (
+            <span className="text-red-600">{errors.password.message}</span>
+          )}
         </div>
 
         <div className="flex flex-col gap-1">
@@ -123,7 +149,9 @@ function App() {
                   {...register(`techs.${index}.title`)}
                 />
                 {errors.techs?.[index]?.title && (
-                  <span>{errors.techs?.[index]?.title?.message}</span>
+                  <span className="text-red-600">
+                    {errors.techs?.[index]?.title?.message}
+                  </span>
                 )}
               </div>
               <div>
@@ -133,12 +161,16 @@ function App() {
                   {...register(`techs.${index}.knowledge`)}
                 />
                 {errors.techs?.[index]?.knowledge && (
-                  <span>{errors.techs?.[index]?.knowledge?.message}</span>
+                  <span className="text-red-600">
+                    {errors.techs?.[index]?.knowledge?.message}
+                  </span>
                 )}
               </div>
             </div>
           ))}
-          {errors.techs && <span>{errors.techs.message}</span>}
+          {errors.techs && (
+            <span className="text-red-600">{errors.techs.message}</span>
+          )}
         </div>
 
         <button
