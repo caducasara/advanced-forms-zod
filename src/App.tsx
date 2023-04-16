@@ -1,17 +1,28 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useFieldArray, useForm } from "react-hook-form";
+import { FormProvider, useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
+import { Form } from "./components/Form";
 import { client } from "./lib/supabase";
 import "./styles/global.css";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+];
 
 const createUserFormSchema = z.object({
   avatar: z
     .instanceof(FileList)
-    .transform((list) => list.item(0)!)
+    .refine((files) => !!files.item(0), "Profile pisture is required.")
+    .transform((files) => files.item(0)!)
     .refine(
-      (file) => file.size <= 5 * 1024 * 1024,
-      "O arquivo precisa ter no maximo 5MB"
-    ),
+      (file) => ACCEPTED_IMAGE_TYPES.includes(file.type),
+      "Invalid image format."
+    )
+    .refine((file) => file.size <= MAX_FILE_SIZE, "Max file size is 5MB"),
   name: z
     .string()
     .nonempty("Name is required.")
@@ -50,14 +61,16 @@ const createUserFormSchema = z.object({
 type CreateUserFormData = z.infer<typeof createUserFormSchema>;
 
 function App() {
+  const createUserForm = useForm<CreateUserFormData>({
+    resolver: zodResolver(createUserFormSchema),
+  });
+
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { isSubmitting },
     control,
-  } = useForm<CreateUserFormData>({
-    resolver: zodResolver(createUserFormSchema),
-  });
+  } = createUserForm;
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -81,105 +94,70 @@ function App() {
 
   return (
     <main className="w-full h-screen flex items-center justify-center">
-      <form
-        className="w-full max-w-xs flex flex-col gap-4"
-        onSubmit={handleSubmit(createUser)}
-      >
-        <div className="flex flex-col gap-1">
-          <label>Avatar</label>
-          <input type="file" accept="image/*" {...register("avatar")} />
-          {errors.avatar && (
-            <span className="text-red-600">{errors.avatar.message}</span>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label>Name</label>
-          <input
-            type="text"
-            className="w-full h-10 rounded px-3 shadow-sm border border-zinc-600"
-            {...register("name")}
-          />
-          {errors.name && (
-            <span className="text-red-600">{errors.name.message}</span>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label>E-mail</label>
-          <input
-            type="email"
-            className="w-full h-10 rounded px-3 shadow-sm border border-zinc-600"
-            {...register("email")}
-          />
-          {errors.email && (
-            <span className="text-red-600">{errors.email.message}</span>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label>Password</label>
-          <input
-            type="password"
-            className="w-full h-10 rounded px-3 shadow-sm border border-zinc-600"
-            {...register("password")}
-          />
-          {errors.password && (
-            <span className="text-red-600">{errors.password.message}</span>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="flex items-center justify-between">
-            Techs
-            <button
-              type="button"
-              className="text-emerald-500 text-xs"
-              onClick={addNewTech}
-            >
-              Add
-            </button>
-          </label>
-          {fields.map((field, index) => (
-            <div key={field.id} className="flex gap-2">
-              <div>
-                <input
-                  type="text"
-                  className="w-full h-10 rounded px-3 shadow-sm border border-zinc-600"
-                  {...register(`techs.${index}.title`)}
-                />
-                {errors.techs?.[index]?.title && (
-                  <span className="text-red-600">
-                    {errors.techs?.[index]?.title?.message}
-                  </span>
-                )}
-              </div>
-              <div>
-                <input
-                  type="number"
-                  className="w-full h-10 rounded px-3 shadow-sm border border-zinc-600"
-                  {...register(`techs.${index}.knowledge`)}
-                />
-                {errors.techs?.[index]?.knowledge && (
-                  <span className="text-red-600">
-                    {errors.techs?.[index]?.knowledge?.message}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-          {errors.techs && (
-            <span className="text-red-600">{errors.techs.message}</span>
-          )}
-        </div>
-
-        <button
-          type="submit"
-          className="bg-emerald-500 hover:bg-emerald-600 rounded font-semibold text-white h-10"
+      <FormProvider {...createUserForm}>
+        <form
+          className="w-full max-w-xs flex flex-col gap-4"
+          onSubmit={handleSubmit(createUser)}
         >
-          Save
-        </button>
-      </form>
+          <Form.Field>
+            <Form.Label htmlFor="avatar">Avatar</Form.Label>
+            <Form.Input name="avatar" type="file" accept="image/*" />
+            <Form.Error field="avatar" />
+          </Form.Field>
+
+          <Form.Field>
+            <Form.Label>Name</Form.Label>
+            <Form.Input name="name" type="text" />
+            <Form.Error field="name" />
+          </Form.Field>
+
+          <Form.Field>
+            <Form.Label>E-mail</Form.Label>
+            <Form.Input name="email" type="email" />
+            <Form.Error field="email" />
+          </Form.Field>
+
+          <Form.Field>
+            <Form.Label>Password</Form.Label>
+            <Form.Input name="password" type="password" />
+            <Form.Error field="password" />
+          </Form.Field>
+
+          <Form.Field>
+            <Form.Label>
+              Techs
+              <button
+                type="button"
+                className="text-emerald-500 text-xs"
+                onClick={addNewTech}
+              >
+                Add
+              </button>
+            </Form.Label>
+
+            {fields.map((field, index) => (
+              <div key={field.id} className="flex gap-2">
+                <div>
+                  <Form.Input name={`techs.${index}.title`} type="text" />
+                  <Form.Error field={`techs.${index}.title`} />
+                </div>
+                <div>
+                  <Form.Input name={`techs.${index}.knowledge`} type="number" />
+                  <Form.Error field={`techs.${index}.knowledge`} />
+                </div>
+              </div>
+            ))}
+          </Form.Field>
+
+          <button
+            type="submit"
+            className="bg-emerald-500 hover:bg-emerald-600 rounded font-semibold text-white h-10 disabled:bg-emerald-950"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Enviando..." : "Save"}
+          </button>
+        </form>
+      </FormProvider>
     </main>
   );
 }
