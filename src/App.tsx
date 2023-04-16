@@ -66,7 +66,7 @@ function App() {
   });
 
   const {
-    register,
+    watch,
     handleSubmit,
     formState: { isSubmitting },
     control,
@@ -91,6 +91,11 @@ function App() {
       knowledge: 0,
     });
   }
+
+  const userPassword = watch("password");
+  const isPassWordStrong = new RegExp(
+    "(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9])(?=.{8,})"
+  ).test(userPassword);
 
   return (
     <main className="w-full h-screen flex items-center justify-center">
@@ -118,7 +123,21 @@ function App() {
           </Form.Field>
 
           <Form.Field>
-            <Form.Label>Password</Form.Label>
+            <Form.Label>
+              Password
+              {!isPassWordStrong && userPassword.length > 0 ? (
+                <span className="text-xs text-red-500">
+                  Not's a strong password
+                </span>
+              ) : (
+                isPassWordStrong &&
+                userPassword.length > 0 && (
+                  <span className="text-xs text-emerald-600">
+                    Strong password
+                  </span>
+                )
+              )}
+            </Form.Label>
             <Form.Input name="password" type="password" />
             <Form.Error field="password" />
           </Form.Field>
