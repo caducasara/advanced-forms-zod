@@ -173,7 +173,7 @@ function App() {
             className="bg-emerald-500 hover:bg-emerald-600 rounded font-semibold text-white h-10 disabled:bg-emerald-950"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Enviando..." : "Save"}
+            {isSubmitting ? "Sending..." : "Save"}
           </button>
         </form>
       </FormProvider>
